@@ -3,6 +3,7 @@
 import { LayoutDashboard, Clock, FolderOpen, BarChart3, Users, CalendarDays, Settings, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const StaffCoLogo = () => (
   <svg viewBox="0 0 664 664" fill="none" className="w-8 h-8 flex-shrink-0">
@@ -47,30 +48,59 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const isSettings = item.label === "Settings";
+
+          const handleClick = () => {
+            if (!isSettings) {
+              toast.info("This section is not part of the prototype", {
+                duration: 2000,
+              });
+            }
+          };
+
+          const content = (
+            <>
+              <Icon className="w-5 h-5" />
+              <span className="text-sm font-medium flex-1">{item.label}</span>
+              {item.badge && (
+                <Badge className="bg-[var(--primary)] text-white text-[10px] px-1.5 py-0 h-5">
+                  {item.badge}
+                </Badge>
+              )}
+              {item.hasChevron && (
+                <ChevronRight className="w-4 h-4 opacity-40" />
+              )}
+            </>
+          );
+
           return (
             <div key={item.label} className="relative">
               {item.isActive && (
                 <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--primary)] rounded-r-full"></div>
               )}
-              <Link
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors ${
-                  item.isActive
-                    ? "bg-[var(--primary-light)] text-[var(--primary)]"
-                    : "text-[var(--text-secondary)] hover:bg-gray-50"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-sm font-medium flex-1">{item.label}</span>
-                {item.badge && (
-                  <Badge className="bg-[var(--primary)] text-white text-[10px] px-1.5 py-0 h-5">
-                    {item.badge}
-                  </Badge>
-                )}
-                {item.hasChevron && (
-                  <ChevronRight className="w-4 h-4 opacity-40" />
-                )}
-              </Link>
+              {isSettings ? (
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors ${
+                    item.isActive
+                      ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-gray-50"
+                  }`}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <button
+                  onClick={handleClick}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors cursor-pointer ${
+                    item.isActive
+                      ? "bg-[var(--primary-light)] text-[var(--primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-gray-50"
+                  }`}
+                >
+                  {content}
+                </button>
+              )}
             </div>
           );
         })}
