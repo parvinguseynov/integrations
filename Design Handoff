@@ -1,0 +1,501 @@
+Design Handoff — Integrations Feature
+Overview
+This document provides everything a frontend developer needs to implement the Integrations feature in StaffCo's web application (Quasar v2 / Vue 3) without a designer.
+Resources:
+
+Live prototype: [https://staffco-integrations.vercel.app/]
+Prototype source code: https://github.com/parvinguseynov/integrations
+PRD: [Link to Confluence — Unified.to Integration PRD]
+Jira Stories: Story 9 (Integrations page), Story 10 (Task Settings), Story 11 (Messaging Settings)
+
+
+The prototype is built in Next.js + React + shadcn/ui. You are implementing in Quasar v2 (Vue 3). Use the prototype as a pixel-perfect visual reference. Component mapping to Quasar is provided below.
+
+
+Design Tokens
+Colors
+scss// Primary
+$primary: #0066FF;
+$primary-hover: #0052CC;
+$primary-light: rgba(0, 102, 255, 0.06);
+$primary-border: rgba(0, 102, 255, 0.15);
+
+// Status
+$success: #16A34A;
+$success-light: rgba(22, 163, 74, 0.08);
+$success-border: rgba(22, 163, 74, 0.2);
+$warning: #F59E0B;
+$warning-light: rgba(245, 158, 11, 0.08);
+$error: #EF4444;
+
+// Backgrounds
+$bg-page: #F8F9FB;
+$bg-card: #FFFFFF;
+$bg-sidebar: #FAFBFC;
+$bg-hover: rgba(0, 0, 0, 0.02);
+
+// Text
+$text-primary: #111827;
+$text-secondary: #6B7280;
+$text-muted: #9CA3AF;
+
+// Borders
+$border: #E5E7EB;
+$border-light: #F3F4F6;
+$divider: #F0F1F3;
+Typography
+scss// Font families — add to quasar.config.js or index.html
+$font-primary: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+// Google Fonts import (add to index.html <head>):
+// https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap
+ElementSizeWeightLetter-spacingColorPage title (h1)24px700-0.5pxtext-primarySection title (h2)15px600-0.2pxtext-primaryCard title15px6000text-primaryBody text14px4000text-primaryDescription13px4000text-secondarySmall / label12px5000text-mutedBadge text12px6000variesMonospace (project keys, emails)12px4000text-muted
+Corners and Shadows
+scss$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 20px;
+$radius-full: 9999px;
+
+$shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02);
+$shadow-card-hover: 0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,102,255,0.1);
+$shadow-modal: 0 24px 64px rgba(0,0,0,0.15);
+Animations
+InteractionDurationEasingEffectCard hover200mseasetranslateY(-2px) + shadow upgrade + border colorPage transition400mseaseopacity 0→1, translateY 12→0Card stagger50ms delay eacheasesequential entranceModal open300msease-outbackdrop fade + scale 0.95→1Toggle switch200msspringthumb slidesSync spinner2000mslinearrotate 360degToast300ms in / auto-dismiss 3seaseslide-in from right
+
+Component Mapping: Prototype → Quasar v2
+Prototype (shadcn/ui)Quasar v2 ComponentNotesButton<q-btn>Use flat, outline, unelevated propsCard<q-card> + <q-card-section>Add custom border-radius and shadow via classBadge<q-badge>Or custom <span> with badge classesDialog / Modal<q-dialog>Use v-model for stateInput<q-input>outlined or borderless variantSelect / Dropdown<q-select>outlined, emit-value, map-optionsSwitch / Toggle<q-toggle>Style to match iOS look via custom CSSRadio Group<q-option-group> with type="radio"Or individual <q-radio>Checkbox<q-checkbox>Custom color via color="primary"Separator / Divider<q-separator>Toast / Notification$q.notify()Position: bottom-right, timeout: 3000Tooltip<q-tooltip>Spinner<q-spinner> or <q-spinner-dots>
+Custom Components to Build
+These don't have a direct Quasar equivalent — build as Vue 3 SFCs:
+
+ProviderCard.vue — integration provider card with connected/disconnected states
+ProviderLogo.vue — SVG logos for each provider (Jira, Asana, etc.)
+CategorySection.vue — section header with icon, title, badge, subtitle
+OAuthModal.vue — 4-state connection flow modal
+DisconnectModal.vue — confirmation dialog
+UserMappingTable.vue — matched/unmatched users with dropdowns
+ProjectSelector.vue — searchable checklist of projects
+NotificationToggleCard.vue — notification type with toggle and description
+SlackPreview.vue — mock Slack message
+SettingsBottomBar.vue — sticky footer with sync status and save button
+
+
+Screen 1: Integrations Page
+Route: /settings/integrations
+Jira Story: Story 9
+Access: Owner and Admin roles only
+Layout
+Sidebar (existing) → Settings → Integrations (new sub-page)
+Content Structure
+[Page Header]
+  h1 "Integrations" + QBadge "2 active" (blue)
+  Subtitle text
+
+[Search]
+  QInput with search icon, max-width 320px
+
+[Category: Project Management]
+  CategorySection icon=blue, title, badge "5 available", subtitle "Sync tasks for time tracking"
+  Grid 3-col: ProviderCard x5
+
+[Category: Messaging & Notifications]
+  CategorySection icon=purple, title, badge "3 available", subtitle "Summaries and alerts"
+  Grid 3-col: ProviderCard x3
+
+[Category: Calendars]
+  CategorySection icon=green, title, badge "1 connected", subtitle "Native integration"
+  Grid: ProviderCard x1 (Google Calendar)
+
+[Footer]
+  "Need an integration we don't support yet? Let us know"
+ProviderCard States
+Disconnected:
+┌──────────────────────────────────────────────┐
+│ [44px logo]  Provider Name                   │
+│              Description text (gray)         │
+└──────────────────────────────────────────────┘
+Hover: shadow upgrade, lift -2px, "Connect →" top-right
+Click: opens OAuthModal
+Connected:
+┌─── gradient bar (3px, brand-color → green) ──┐
+│ [44px logo]  Provider Name  ✓ Connected      │
+│              Description text (gray)         │
+│ ──────────────────────────────────────────── │
+│ 🕐 Synced 2m ago  👥 9 users      [Manage]  │
+└──────────────────────────────────────────────┘
+Border: success-border color
+Hover: "Disconnect" text top-right (red, subtle)
+"Manage" click: navigates to settings page
+Provider Data
+javascriptconst providers = {
+  task: [
+    { id: 'jira', name: 'Jira', desc: 'Sync projects, epics, and issues from Atlassian Jira', color: '#0052CC' },
+    { id: 'asana', name: 'Asana', desc: 'Import tasks and projects from Asana workspace', color: '#F06A6A' },
+    { id: 'trello', name: 'Trello', desc: 'Sync boards, lists, and cards from Trello', color: '#0079BF' },
+    { id: 'clickup', name: 'ClickUp', desc: 'Import spaces, folders, and tasks from ClickUp', color: '#7B68EE' },
+    { id: 'linear', name: 'Linear', desc: 'Sync teams, projects, and issues from Linear', color: '#5E6AD2' },
+  ],
+  messaging: [
+    { id: 'slack', name: 'Slack', desc: 'Team notifications, daily summaries, and alerts', color: '#4A154B' },
+    { id: 'teams', name: 'Microsoft Teams', desc: 'Notifications and summaries in Teams channels', color: '#5B5FC7' },
+    { id: 'discord', name: 'Discord', desc: 'Bot notifications for remote and async teams', color: '#5865F2' },
+  ],
+  calendar: [
+    { id: 'gcal', name: 'Google Calendar', desc: 'Seamless scheduling and event sync', color: '#4285F4', native: true },
+  ],
+}
+Provider Logos
+Each logo is an SVG: rounded square (border-radius 10px) with brand color background and white icon inside. Size: 44x44px.
+Copy the SVG code from prototype source: components/integrations/ProviderLogo.tsx. Convert JSX syntax to Vue template syntax (className → class, strokeWidth → stroke-width, etc.)
+Key Behaviors
+
+Multiple providers per category can be connected simultaneously (no blocking)
+"X active" badge updates dynamically based on total connected count
+Search filters cards by provider name across all categories
+Cards animate in with stagger on page load
+Disconnect from card hover → opens DisconnectModal → on confirm removes from state
+
+
+Screen 2: Task Management Settings
+Route: /settings/integrations/task/:providerId (e.g., /settings/integrations/task/jira)
+Jira Story: Story 10
+Access: Owner and Admin roles only
+Header
+← Back to Integrations
+
+[Jira logo 44px]  Jira Integration  QBadge "Connected" (green)
+acme-corp.atlassian.net · Connected by Parvin Huseynov · Jan 27, 2026
+
+                                    [Sync Now]  [Disconnect]
+
+"Back to Integrations" — router.push('/settings/integrations')
+"Sync Now" — QBtn outline, RefreshCw icon, spins for 2 seconds on click, calls POST /integrations/{id}/sync
+"Disconnect" — QBtn flat red, Trash2 icon, opens DisconnectModal
+
+Section A: Projects to Sync
+QCard
+├─ Title: "Projects to Sync" with Folder icon
+├─ QOptionGroup type="radio": "All projects" / "Selected projects"
+└─ When "Selected":
+   ├─ QInput search (filter projects by name)
+   ├─ Project list:
+   │   ├─ QCheckbox + "WEBAPP" (mono) + "Web App Redesign" + QBadge "24 tasks" + "Lead: John Smith"
+   │   ├─ QCheckbox + "MOBILE" (mono) + "Mobile App" + QBadge "18 tasks" + "Lead: Maria Lopez"
+   │   ├─ ... (6 projects total)
+   └─ Counter: "2 of 6 projects selected"
+Each project row: flex, items-center, gap-3, padding 12px, rounded-lg, hover:bg-gray-50
+Section B: Task Assignment
+QCard
+├─ Title: "Task Assignment" with Settings icon
+├─ QOptionGroup type="radio":
+│   ├─ "Mirror assignments from Jira" + QBadge "recommended"
+│   │   └─ description text below
+│   └─ "Make all synced tasks available to everyone"
+│       └─ description text below
+Section C: User Mapping
+QCard
+├─ Title: "User Mapping" with Users icon + QBadge "8 of 10 matched"
+├─ Matched users (green rows):
+│   ├─ ✅ john@acme.com → John Smith
+│   ├─ ✅ maria@acme.com → Maria Lopez
+│   ├─ ... (8 total)
+├─ Unmatched users (warning rows, yellow-tinted bg):
+│   ├─ ⚠️ alex.k@gmail.com → [QSelect: choose StaffCo user]
+│   └─ ⚠️ freelancer@web.dev → [QSelect: choose StaffCo user]
+Email in monospace font. Arrow icon between email and name/dropdown. QSelect options: team member names + "Skip (don't assign)".
+Sticky Bottom Bar
+┌────────────────────────────────────────────────────────────────┐
+│ 🕐 Last synced: 2 minutes ago              [Save Settings]    │
+└────────────────────────────────────────────────────────────────┘
+Fixed bottom, white bg, border-top, z-10. "Save Settings" is QBtn primary. On click: call PUT /integrations/{id}/settings + $q.notify({ message: 'Settings saved', type: 'positive', position: 'bottom-right', timeout: 3000 })
+
+Screen 3: Messaging Settings
+Route: /settings/integrations/messaging/:providerId
+Jira Story: Story 11
+Access: Owner and Admin roles only
+Header
+Same pattern as Screen 2 but with Slack logo and metadata:
+acme-corp.slack.com · Connected by Parvin Huseynov · Feb 15, 2026
+Section A: Notification Channel
+QCard
+├─ Title: "Notification Channel" with Hash icon
+└─ QSelect outlined
+   ├─ #staffco-alerts (default)
+   ├─ #general
+   ├─ #engineering
+   ├─ #management
+   └─ #random
+Section B: Notification Types
+QCard
+├─ Title: "Notification Types"
+├─ Subtitle: "Choose which notifications are sent to the selected channel"
+│
+├─ [BarChart3 icon]  Daily Team Summary           [QToggle ON]
+│   Description + "Schedule: 6:00 PM"
+│   ── QSeparator ──
+├─ [AlertTriangle]   Overtime Alerts               [QToggle ON]
+│   Description
+│   ── QSeparator ──
+├─ [Bell icon]       Tracking Reminders            [QToggle OFF]
+│   Description (opacity 0.5 when OFF)
+│   ── QSeparator ──
+└─ [Palmtree icon]   Time-Off Notifications        [QToggle OFF]
+    Description (opacity 0.5 when OFF)
+QToggle should be styled to match iOS toggle appearance. When OFF: text content gets opacity: 0.5 class with transition.
+Section C: Message Preview
+Mock Slack message. This is purely visual — no interaction.
+QCard with bg-slate-50
+├─ Left: 4px vertical bar in primary color
+├─ StaffCo logo (24px) + "StaffCo Bot" bold + QBadge "APP" gray + "6:00 PM"
+├─ "📊 Daily Summary — Design Team — Mar 3" bold
+├─ "👥 Team: 5 members tracked today"
+├─ User table:
+│   John Smith      7h 30m    ✅
+│   Maria Lopez     8h 15m    ✅
+│   Alex Kim        6h 00m    ⚠️ Below target
+│   Sarah Chen      0h 00m    🔴 No tracking
+│   Bob Wilson      9h 45m    ⚠️ Overtime
+└─ "Total: 31h 30m │ Target: 40h"
+Sticky Bottom Bar
+Same as Screen 2.
+
+Screen 4: OAuth Connection Flow
+Component: OAuthModal.vue (QDialog)
+Triggered from: Clicking a disconnected ProviderCard
+State Machine
+[Disconnected card clicked]
+        ↓
+   State 1: Connecting (2s auto-advance)
+        ↓
+   State 2: Authorizing
+        ↓
+   [User clicks Authorize]  OR  [User clicks Cancel]
+        ↓                            ↓
+   State 3: Success              Close modal
+        ↓
+   [Done] → close modal      [Go to Settings] → navigate
+State 1: Connecting
+
+QDialog persistent, max-width 440px
+Provider logo (56px) centered
+"Connect {Provider Name}" title
+Description text
+QSpinnerDots or custom spinner
+"Redirecting to {Provider}..." muted text
+QBtn flat "Cancel"
+setTimeout(2000) → advance to State 2
+
+State 2: Authorizing
+
+Simulated browser chrome: gray rounded bar with lock icon + URL text
+Provider logo + "Authorize StaffCo" heading
+Permission list with shield icons:
+
+"Read your projects and workspaces"
+"Read tasks, issues, and assignments"
+"Read user profiles and email addresses"
+
+
+QBtn primary block "Authorize"
+QBtn flat "Cancel"
+
+State 3: Success
+
+Green CheckCircle icon with scale animation (CSS transform: scale(0) → scale(1))
+"{Provider Name} Connected!" title
+"Projects and tasks will begin syncing shortly." subtitle
+QBtn primary "Go to Settings" → navigate to Screen 2 or 3
+QBtn flat "Done" → close modal, update connection state
+
+State 4: Error (accessible via "Simulate error" link in State 1)
+
+Red XCircle icon
+"Connection Failed" title
+QBtn primary "Try Again" → back to State 1
+QBtn flat "Cancel" → close
+
+Disconnect Modal
+Separate QDialog. Triggered from "Disconnect" button on Screens 2/3 or hover on connected card.
+
+AlertTriangle icon (amber, 48px)
+"Disconnect {Provider}?" title
+"Synced projects and tasks will be archived. Time already tracked will be preserved."
+"This will affect 9 connected users." muted text
+QBtn outline "Cancel" + QBtn color="negative" "Disconnect"
+On confirm: DELETE /integrations/{id} → navigate to integrations page → $q.notify
+
+
+API Endpoints Reference
+ActionMethodEndpointScreenInitiate OAuthPOST/integrations/connectScreen 4OAuth callbackPOST/integrations/callbackScreen 4List connectionsGET/integrationsScreen 1Connection detailsGET/integrations/{id}Screen 2, 3Update settingsPUT/integrations/{id}/settingsScreen 2, 3DisconnectDELETE/integrations/{id}Screen 2, 3, 4Force syncPOST/integrations/{id}/syncScreen 2, 3Sync statusGET/integrations/{id}/statusScreen 2, 3User mappingsGET/integrations/{id}/user-mappingScreen 2Manual mappingPUT/integrations/{id}/user-mapping/{mid}Screen 2
+All endpoints are restricted to Owner and Admin roles.
+
+State Management
+Use a Pinia store:
+typescript// stores/integrations.ts
+import { defineStore } from 'pinia'
+
+interface Connection {
+  id: string
+  provider: string        // 'jira', 'slack', etc.
+  category: 'task' | 'messaging' | 'calendar'
+  status: 'connected' | 'disconnected'
+  workspace?: string      // 'acme-corp.atlassian.net'
+  connectedBy?: string
+  connectedAt?: string
+  lastSyncAt?: string
+  settings?: {
+    projectMode: 'all' | 'selected'
+    selectedProjects: string[]
+    assignmentMode: 'mirror' | 'everyone'
+    channel?: string
+    notifications?: {
+      dailySummary: boolean
+      overtimeAlerts: boolean
+      trackingReminders: boolean
+      timeOff: boolean
+    }
+  }
+}
+
+export const useIntegrationsStore = defineStore('integrations', {
+  state: () => ({
+    connections: [] as Connection[],
+    loading: false,
+    error: null as string | null,
+  }),
+  
+  getters: {
+    connectedProviders: (state) => state.connections.filter(c => c.status === 'connected'),
+    activeCount: (state) => state.connections.filter(c => c.status === 'connected').length,
+    getByProvider: (state) => (provider: string) => state.connections.find(c => c.provider === provider),
+    taskConnections: (state) => state.connections.filter(c => c.category === 'task' && c.status === 'connected'),
+    messagingConnections: (state) => state.connections.filter(c => c.category === 'messaging' && c.status === 'connected'),
+  },
+
+  actions: {
+    async fetchConnections() { /* GET /integrations */ },
+    async connect(provider: string) { /* POST /integrations/connect */ },
+    async disconnect(id: string) { /* DELETE /integrations/{id} */ },
+    async updateSettings(id: string, settings: object) { /* PUT /integrations/{id}/settings */ },
+    async forceSync(id: string) { /* POST /integrations/{id}/sync */ },
+    async fetchUserMappings(id: string) { /* GET /integrations/{id}/user-mapping */ },
+    async updateUserMapping(id: string, mappingId: string, userId: string) { /* PUT */ },
+  }
+})
+
+File Structure (within existing StaffCo project)
+src/
+├─ pages/
+│   └─ settings/
+│       └─ integrations/
+│           ├─ IntegrationsPage.vue          # Screen 1
+│           ├─ TaskSettingsPage.vue           # Screen 2
+│           └─ MessagingSettingsPage.vue      # Screen 3
+├─ components/
+│   └─ integrations/
+│       ├─ ProviderCard.vue
+│       ├─ ProviderLogo.vue
+│       ├─ CategorySection.vue
+│       ├─ OAuthModal.vue
+│       ├─ DisconnectModal.vue
+│       ├─ ProjectSelector.vue
+│       ├─ UserMappingTable.vue
+│       ├─ AssignmentModeRadio.vue
+│       ├─ ChannelSelector.vue
+│       ├─ NotificationToggleCard.vue
+│       ├─ SlackPreview.vue
+│       └─ SettingsBottomBar.vue
+├─ stores/
+│   └─ integrations.ts                       # Pinia store
+└─ assets/
+    └─ icons/
+        └─ providers/                         # Provider SVG logos
+            ├─ jira.svg
+            ├─ asana.svg
+            ├─ trello.svg
+            ├─ clickup.svg
+            ├─ linear.svg
+            ├─ slack.svg
+            ├─ teams.svg
+            ├─ discord.svg
+            └─ gcal.svg
+Routes (add to router)
+typescript{
+  path: '/settings/integrations',
+  component: () => import('pages/settings/integrations/IntegrationsPage.vue'),
+  meta: { roles: ['owner', 'admin'] }
+},
+{
+  path: '/settings/integrations/task/:providerId',
+  component: () => import('pages/settings/integrations/TaskSettingsPage.vue'),
+  meta: { roles: ['owner', 'admin'] }
+},
+{
+  path: '/settings/integrations/messaging/:providerId',
+  component: () => import('pages/settings/integrations/MessagingSettingsPage.vue'),
+  meta: { roles: ['owner', 'admin'] }
+}
+
+Implementation Notes
+
+Start with Screen 1 (Integrations page) — it's the entry point and the simplest screen. Get the card layout and connect/disconnect flow working first.
+Provider logos — copy SVG code from prototype GitHub repo (components/integrations/ProviderLogo.tsx). Convert React JSX to Vue template syntax. Or extract SVGs into separate .svg files in assets/icons/providers/.
+QToggle iOS style — Quasar's default toggle looks different from iOS. Apply custom CSS:
+
+css.ios-toggle .q-toggle__inner {
+  width: 51px;
+  height: 31px;
+}
+.ios-toggle .q-toggle__thumb {
+  width: 27px;
+  height: 27px;
+}
+
+Gradient bar on connected cards — use CSS pseudo-element:
+
+css.provider-card--connected::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-color), #16A34A);
+  border-radius: 16px 16px 0 0;
+}
+
+Card hover effects — use CSS transitions:
+
+css.provider-card {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.provider-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,102,255,0.1);
+}
+
+Page transitions — use Vue's <Transition> component or Quasar's built-in page transitions.
+Toast notifications — use $q.notify() with position 'bottom-right' and 3000ms timeout.
+Until backend is ready — use mock data (same as prototype). The Pinia store actions should return mock data with a simulated delay (await new Promise(r => setTimeout(r, 500))). When backend endpoints are available, replace mock calls with actual API calls.
+
+
+QA Checklist
+Before marking any Story as done, verify:
+
+ Provider cards show correct logo, name, description
+ Connected state: gradient bar, badge, sync info, Manage button
+ Disconnected state: hover effects, "Connect →" text on hover
+ OAuth modal: all 4 states animate correctly
+ Disconnect modal: shows impact count, returns to integrations page
+ Multiple providers per category can be connected
+ Active count badge updates dynamically
+ Search filters work across all categories
+ Task Settings: project selector works (all/selected, search, checkboxes)
+ Task Settings: user mapping shows matched/unmatched correctly
+ Task Settings: Sync Now spins for 2 seconds
+ Messaging Settings: channel dropdown works
+ Messaging Settings: notification toggles fade content on/off
+ Messaging Settings: Slack preview renders correctly
+ Save Settings shows toast notification
+ Page transitions are smooth
+ Responsive: 3 columns > 2 columns > 1 column
+ Access control: pages only visible to Owner/Admin roles
