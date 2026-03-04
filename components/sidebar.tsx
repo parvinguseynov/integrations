@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Clock, FolderOpen, BarChart3, Users, CalendarDays, Settings, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Clock, FolderOpen, BarChart3, Users, CalendarDays, Settings, ChevronRight, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -104,6 +104,20 @@ export function Sidebar() {
             </div>
           );
         })}
+
+        {/* Demos Section */}
+        <div className="mt-4 mb-2 px-3">
+          <div className="text-[10px] font-medium tracking-wider text-[var(--text-muted)] uppercase">
+            Demos
+          </div>
+        </div>
+        <Link
+          href="/flow/messaging"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors text-[var(--text-secondary)] hover:bg-gray-50"
+        >
+          <Play className="w-5 h-5" />
+          <span className="text-sm font-medium flex-1">Integration Flow</span>
+        </Link>
       </nav>
     </aside>
   );
