@@ -21,7 +21,10 @@ import {
   Clock,
 } from "lucide-react";
 import { ProviderLogo } from "@/components/provider-logos";
+import { DisconnectModal } from "@/components/disconnect-modal";
+import { useConnections } from "@/contexts/connection-context";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -97,12 +100,21 @@ const initialNotifications: NotificationType[] = [
 ];
 
 export default function MessagingSettingsPage() {
+  const router = useRouter();
+  const { disconnect } = useConnections();
   const [selectedChannel, setSelectedChannel] = useState("#staffco-alerts");
   const [notifications, setNotifications] = useState<NotificationType[]>(initialNotifications);
   const [selectedTab, setSelectedTab] = useState("daily-summary");
+  const [disconnectModal, setDisconnectModal] = useState(false);
 
   const handleSave = () => {
     toast.success("Settings saved");
+  };
+
+  const handleDisconnect = () => {
+    disconnect("messaging", "slack");
+    toast.success("Slack disconnected");
+    router.push("/");
   };
 
   const toggleNotification = (id: string) => {
@@ -161,6 +173,7 @@ export default function MessagingSettingsPage() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setDisconnectModal(true)}
             className="text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error)]/10"
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -508,6 +521,13 @@ export default function MessagingSettingsPage() {
           </Button>
         </div>
       </motion.div>
+
+      <DisconnectModal
+        open={disconnectModal}
+        onOpenChange={setDisconnectModal}
+        provider={{ id: "slack", name: "Slack" }}
+        onConfirm={handleDisconnect}
+      />
     </AppLayout>
   );
 }

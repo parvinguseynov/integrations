@@ -11,6 +11,7 @@ import { useConnections } from "@/contexts/connection-context";
 import { motion } from "framer-motion";
 import { OAuthModal } from "@/components/oauth-modal";
 import { DisconnectModal } from "@/components/disconnect-modal";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const providers = {
@@ -68,6 +69,7 @@ const categories: Category[] = [
 ];
 
 export default function IntegrationsPage() {
+  const router = useRouter();
   const { isConnected, connections, disconnect } = useConnections();
   const [searchQuery, setSearchQuery] = useState("");
   const [oauthModal, setOauthModal] = useState<{
@@ -192,6 +194,18 @@ export default function IntegrationsPage() {
                               : category.id === "messaging"
                               ? "/messaging-settings"
                               : undefined
+                            : undefined
+                        }
+                        onCardClick={
+                          isConnected(categoryKey, provider.id)
+                            ? () => {
+                                const url = category.id === "task"
+                                  ? "/task-settings"
+                                  : category.id === "messaging"
+                                  ? "/messaging-settings"
+                                  : undefined;
+                                if (url) router.push(url);
+                              }
                             : undefined
                         }
                       />

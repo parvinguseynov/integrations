@@ -102,7 +102,11 @@ const SlackCardDisconnected = () => (
   </div>
 );
 
-const SlackCardConnected = () => (
+interface SlackCardConnectedProps {
+  onManageClick?: () => void;
+}
+
+const SlackCardConnected = ({ onManageClick }: SlackCardConnectedProps) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
@@ -156,6 +160,7 @@ const SlackCardConnected = () => (
         </div>
         <Button
           size="sm"
+          onClick={onManageClick}
           className="h-7 px-3 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white text-xs rounded-full"
         >
           Manage
@@ -169,25 +174,9 @@ export default function IntegrationFlowPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const router = useRouter();
 
-  // Auto-advance for certain steps
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-
-    if (currentStep === 2) {
-      timer = setTimeout(() => setCurrentStep(3), 2000);
-    } else if (currentStep === 4) {
-      timer = setTimeout(() => setCurrentStep(5), 3000);
-    } else if (currentStep === 7) {
-      timer = setTimeout(() => setCurrentStep(8), 4000);
-    } else if (currentStep === 8) {
-      timer = setTimeout(() => setCurrentStep(9), 3000);
-    }
-
-    return () => clearTimeout(timer);
-  }, [currentStep]);
-
   const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 9));
   const restart = () => setCurrentStep(1);
+  const goToMessagingSettings = () => router.push("/messaging-settings");
 
   return (
     <AppLayout>
@@ -277,6 +266,12 @@ export default function IntegrationFlowPage() {
                 </p>
 
                 <ActorPills active={["staffco", "unified"]} />
+
+                <div className="flex justify-center">
+                  <Button onClick={nextStep} size="lg">
+                    Continue
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -417,6 +412,12 @@ export default function IntegrationFlowPage() {
                 </p>
 
                 <ActorPills active={["staffco", "unified", "slack"]} />
+
+                <div className="flex justify-center">
+                  <Button onClick={nextStep} size="lg">
+                    Continue
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -427,7 +428,7 @@ export default function IntegrationFlowPage() {
                 </h1>
 
                 <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-8 mb-6">
-                  <SlackCardConnected />
+                  <SlackCardConnected onManageClick={goToMessagingSettings} />
                 </div>
 
                 <p className="text-sm text-[var(--text-secondary)] mb-6 text-center max-w-2xl mx-auto">
@@ -437,7 +438,7 @@ export default function IntegrationFlowPage() {
                 <ActorPills active={["staffco"]} />
 
                 <div className="flex justify-center">
-                  <Button onClick={nextStep} size="lg">
+                  <Button onClick={goToMessagingSettings} size="lg">
                     Open Settings
                   </Button>
                 </div>
@@ -611,6 +612,12 @@ export default function IntegrationFlowPage() {
                 </p>
 
                 <ActorPills active={["staffco"]} />
+
+                <div className="flex justify-center">
+                  <Button onClick={nextStep} size="lg">
+                    Send Message
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -688,6 +695,12 @@ export default function IntegrationFlowPage() {
                 </p>
 
                 <ActorPills active={["staffco", "unified", "slack"]} />
+
+                <div className="flex justify-center">
+                  <Button onClick={nextStep} size="lg">
+                    See Result
+                  </Button>
+                </div>
               </div>
             )}
 

@@ -22,7 +22,10 @@ import {
   Clock,
 } from "lucide-react";
 import { ProviderLogo } from "@/components/provider-logos";
+import { DisconnectModal } from "@/components/disconnect-modal";
+import { useConnections } from "@/contexts/connection-context";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -52,11 +55,14 @@ const unmatchedUsers = [
 ];
 
 export default function TaskSettingsPage() {
+  const router = useRouter();
+  const { disconnect } = useConnections();
   const [syncMode, setSyncMode] = useState("selected");
   const [assignmentMode, setAssignmentMode] = useState("mirror");
   const [projects, setProjects] = useState(mockProjects);
   const [searchQuery, setSearchQuery] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [disconnectModal, setDisconnectModal] = useState(false);
 
   const handleSyncNow = () => {
     setSyncing(true);
@@ -64,6 +70,12 @@ export default function TaskSettingsPage() {
       setSyncing(false);
       toast.success("Synced successfully");
     }, 2000);
+  };
+
+  const handleDisconnect = () => {
+    disconnect("task", "jira");
+    toast.success("Jira disconnected");
+    router.push("/");
   };
 
   const handleSave = () => {
@@ -123,6 +135,7 @@ export default function TaskSettingsPage() {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => setDisconnectModal(true)}
               className="text-[var(--error)] hover:text-[var(--error)] hover:bg-[var(--error)]/10"
             >
               <Trash2 className="w-4 h-4 mr-2" />
@@ -311,6 +324,13 @@ export default function TaskSettingsPage() {
           </Button>
         </div>
       </motion.div>
+
+      <DisconnectModal
+        open={disconnectModal}
+        onOpenChange={setDisconnectModal}
+        provider={{ id: "jira", name: "Jira" }}
+        onConfirm={handleDisconnect}
+      />
     </AppLayout>
   );
 }

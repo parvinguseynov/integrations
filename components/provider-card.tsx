@@ -18,6 +18,7 @@ interface ProviderCardProps {
   onDisconnect?: () => void;
   manageHref?: string;
   native?: boolean;
+  onCardClick?: () => void;
 }
 
 export function ProviderCard({
@@ -30,8 +31,17 @@ export function ProviderCard({
   onDisconnect,
   manageHref,
   native,
+  onCardClick,
 }: ProviderCardProps) {
   const logoKey = id as any;
+
+  const handleClick = () => {
+    if (!isConnected) {
+      onConnect();
+    } else if (onCardClick) {
+      onCardClick();
+    }
+  };
 
   return (
     <motion.div
@@ -45,7 +55,7 @@ export function ProviderCard({
             ? "border-[var(--success)]/20"
             : "hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:border-blue-200"
         }`}
-        onClick={!isConnected ? onConnect : undefined}
+        onClick={handleClick}
       >
         {/* Top gradient bar for connected cards */}
         {isConnected && (
