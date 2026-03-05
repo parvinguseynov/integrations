@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
-import { ConnectionProvider } from "@/contexts/connection-context";
+import { ClientProviders } from "@/components/client-providers";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -31,10 +30,9 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} antialiased font-sans`}
       >
-        <ConnectionProvider>
+        <ClientProviders>
           {children}
-          <Toaster />
-        </ConnectionProvider>
+        </ClientProviders>
       </body>
     </html>
   );
