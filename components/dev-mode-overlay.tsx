@@ -25,9 +25,13 @@ interface ElementSpecs {
     width: string;
     style: string;
     color: string;
-    radius: string;
   };
-  shadow?: string;
+  borderRadius: string;
+  shadow: string;
+  opacity: string;
+  display: string;
+  position: string;
+  overflow?: string;
   rect: DOMRect;
 }
 
@@ -40,7 +44,49 @@ function extractSpecs(element: HTMLElement): ElementSpecs {
   const hasText = element.textContent && element.textContent.trim().length > 0;
   const isTextElement = ["P", "SPAN", "H1", "H2", "H3", "H4", "H5", "H6", "LABEL", "BUTTON", "A"].includes(element.tagName);
 
-  return {
+  // Read border-radius from all 4 corners
+  const topLeft = computed.borderTopLeftRadius;
+  const topRight = computed.borderTopRightRadius;
+  const bottomRight = computed.borderBottomRightRadius;
+  const bottomLeft = computed.borderBottomLeftRadius;
+
+  let borderRadius: string;
+  if (topLeft === topRight && topRight === bottomRight && bottomRight === bottomLeft) {
+    // All corners are the same
+    borderRadius = topLeft;
+  } else {
+    // Different corners
+    borderRadius = `${topLeft} ${topRight} ${bottomRight} ${bottomLeft}`;
+  }
+
+  // Read border properties
+  const borderTopWidth = computed.borderTopWidth;
+  const borderRightWidth = computed.borderRightWidth;
+  const borderBottomWidth = computed.borderBottomWidth;
+  const borderLeftWidth = computed.borderLeftWidth;
+
+  let borderWidth: string;
+  if (borderTopWidth === borderRightWidth && borderRightWidth === borderBottomWidth && borderBottomWidth === borderLeftWidth) {
+    borderWidth = borderTopWidth;
+  } else {
+    borderWidth = `${borderTopWidth} ${borderRightWidth} ${borderBottomWidth} ${borderLeftWidth}`;
+  }
+
+  const hasBorder = borderTopWidth !== "0px" || borderRightWidth !== "0px" ||
+                    borderBottomWidth !== "0px" || borderLeftWidth !== "0px";
+
+  // Debug log (will be removed after verification)
+  console.log("Dev Mode Inspect:", {
+    tag: element.tagName,
+    borderRadius,
+    borderWidth,
+    boxShadow: computed.boxShadow,
+    opacity: computed.opacity,
+    display: computed.display,
+    position: computed.position,
+  });
+
+  const specs: ElementSpecs = {
     tag: element.tagName.toLowerCase(),
     className: element.className.toString().split(" ").slice(0, 2).join(".") || "",
     width: rect.width,
@@ -68,15 +114,21 @@ function extractSpecs(element: HTMLElement): ElementSpecs {
     background: computed.backgroundColor !== "rgba(0, 0, 0, 0)" && computed.backgroundColor !== "transparent"
       ? rgbToHex(computed.backgroundColor)
       : undefined,
-    border: computed.borderWidth !== "0px" ? {
-      width: computed.borderWidth,
-      style: computed.borderStyle,
-      color: rgbToHex(computed.borderColor),
-      radius: computed.borderRadius,
+    border: hasBorder ? {
+      width: borderWidth,
+      style: computed.borderTopStyle,
+      color: rgbToHex(computed.borderTopColor),
     } : undefined,
-    shadow: computed.boxShadow !== "none" ? computed.boxShadow : undefined,
+    borderRadius,
+    shadow: computed.boxShadow !== "none" ? computed.boxShadow : "none",
+    opacity: computed.opacity,
+    display: computed.display,
+    position: computed.position,
+    overflow: computed.overflow !== "visible" ? computed.overflow : undefined,
     rect,
   };
+
+  return specs;
 }
 
 function rgbToHex(rgb: string): string {
@@ -108,12 +160,21 @@ function copySpecsToClipboard(specs: ElementSpecs) {
     }
   }
 
-  if (specs.border && specs.border.radius !== "0px") {
-    lines.push(`border-radius: ${specs.border.radius}`);
+  // Always include border-radius
+  if (specs.borderRadius && specs.borderRadius !== "0px") {
+    lines.push(`border-radius: ${specs.borderRadius}`);
   }
 
   if (specs.background) {
     lines.push(`background: ${specs.background}`);
+  }
+
+  if (specs.border) {
+    lines.push(`border: ${specs.border.width} ${specs.border.style} ${specs.border.color}`);
+  }
+
+  if (specs.shadow && specs.shadow !== "none") {
+    lines.push(`box-shadow: ${specs.shadow}`);
   }
 
   if (specs.font) {
@@ -369,28 +430,36 @@ function TooltipPanel({ specs }: { specs: ElementSpecs }) {
                     <span>{specs.background}</span>
                   </div>
                 )}
+
                 {specs.border && (
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span>Border: {specs.border.width} {specs.border.style}</span>
-                      <div
-                        className="w-[10px] h-[10px] rounded-sm border border-white/50 inline-block"
-                        style={{ background: specs.border.color }}
-                      />
-                      <span>{specs.border.color}</span>
-                    </div>
-                    {specs.border.radius !== "0px" && (
-                      <div className="mt-1">Radius: {specs.border.radius}</div>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span>Border: {specs.border.width} {specs.border.style}</span>
+                    <div
+                      className="w-[10px] h-[10px] rounded-sm border border-white/50 inline-block"
+                      style={{ background: specs.border.color }}
+                    />
+                    <span>{specs.border.color}</span>
                   </div>
                 )}
-                {specs.shadow && (
-                  <div className="text-[11px] text-gray-300">
-                    Shadow: {specs.shadow.length > 50 ? specs.shadow.substring(0, 50) + "..." : specs.shadow}
-                  </div>
-                )}
-                {!specs.background && !specs.border && !specs.shadow && (
-                  <div className="text-gray-500 text-[11px]">None</div>
+
+                {/* Always show border-radius */}
+                <div>
+                  Radius: {specs.borderRadius}
+                  {specs.borderRadius.includes(" ") && (
+                    <span className="text-[10px] text-gray-400 ml-1">(TL TR BR BL)</span>
+                  )}
+                </div>
+
+                <div>Shadow: {specs.shadow}</div>
+
+                <div>Opacity: {specs.opacity}</div>
+
+                <div>Display: {specs.display}</div>
+
+                <div>Position: {specs.position}</div>
+
+                {specs.overflow && (
+                  <div>Overflow: {specs.overflow}</div>
                 )}
               </div>
             </div>
