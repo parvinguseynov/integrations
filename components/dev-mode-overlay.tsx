@@ -108,7 +108,7 @@ function copySpecsToClipboard(specs: ElementSpecs) {
     }
   }
 
-  if (specs.border?.radius !== "0px") {
+  if (specs.border && specs.border.radius !== "0px") {
     lines.push(`border-radius: ${specs.border.radius}`);
   }
 
