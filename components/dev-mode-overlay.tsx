@@ -124,45 +124,133 @@ function copySpecsToClipboard(specs: ElementSpecs) {
     lines.push(`color: ${specs.color}`);
   }
 
-  navigator.clipboard.writeText(lines.join("\n"));
-  toast.success("Copied to clipboard", { duration: 1500 });
+  const fullText = lines.join("\n");
+  const preview = lines.slice(0, 2).join("; ") + (lines.length > 2 ? "; ..." : "");
+
+  navigator.clipboard.writeText(fullText);
+  toast.success(`Copied! ${preview}`, { duration: 2500 });
+}
+
+function BoxModelDiagram({ padding, margin, width, height }: {
+  padding: ElementSpecs["padding"];
+  margin: ElementSpecs["margin"];
+  width: number;
+  height: number;
+}) {
+  const formatValue = (val: number) => val === 0 ? "-" : val.toString();
+
+  return (
+    <div className="w-full flex justify-center my-3">
+      <div className="relative" style={{ width: "180px", height: "120px" }}>
+        {/* Margin layer (orange) */}
+        <div className="absolute inset-0 bg-[#F6A35C]/20 border border-[#F6A35C]/40 rounded flex items-center justify-center">
+          {/* Margin values */}
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[9px] text-[#F6A35C] font-mono font-bold">
+            {formatValue(margin.top)}
+          </div>
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-[#F6A35C] font-mono font-bold">
+            {formatValue(margin.right)}
+          </div>
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-[#F6A35C] font-mono font-bold">
+            {formatValue(margin.bottom)}
+          </div>
+          <div className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-[#F6A35C] font-mono font-bold">
+            {formatValue(margin.left)}
+          </div>
+
+          {/* Padding layer (green) */}
+          <div className="bg-[#93C47D]/20 border border-[#93C47D]/40 rounded" style={{
+            width: "calc(100% - 32px)",
+            height: "calc(100% - 32px)",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            {/* Padding values */}
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[9px] text-[#93C47D] font-mono font-bold">
+              {formatValue(padding.top)}
+            </div>
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-[#93C47D] font-mono font-bold">
+              {formatValue(padding.right)}
+            </div>
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-[#93C47D] font-mono font-bold">
+              {formatValue(padding.bottom)}
+            </div>
+            <div className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-[#93C47D] font-mono font-bold">
+              {formatValue(padding.left)}
+            </div>
+
+            {/* Content layer (blue) */}
+            <div className="bg-[#6FA8DC]/30 border border-[#6FA8DC]/50 rounded px-2 py-1 text-[10px] text-[#6FA8DC] font-mono font-bold text-center">
+              {Math.round(width)} × {Math.round(height)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TooltipPanel({ specs }: { specs: ElementSpecs }) {
-  const { rect, padding, margin } = specs;
+  const { rect } = specs;
 
-  // Position tooltip to avoid going off-screen
+  // Smart positioning: right, left, or above
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const tooltipWidth = 280;
-    const tooltipHeight = 400; // approximate
+    const tooltipWidth = 300;
+    const tooltipHeight = 400; // max height
+    const gap = 12;
+    const viewportPadding = 16;
 
-    let top = rect.top + window.scrollY;
-    let left = rect.right + window.scrollX + 8;
+    let top = 0;
+    let left = 0;
+    let placement: "right" | "left" | "above" = "right";
 
-    // If tooltip goes off right edge, place it on the left
-    if (left + tooltipWidth > viewportWidth) {
-      left = rect.left + window.scrollX - tooltipWidth - 8;
+    // Try right first
+    if (rect.right + gap + tooltipWidth + viewportPadding < viewportWidth) {
+      placement = "right";
+      left = rect.right + window.scrollX + gap;
+      // Vertically center
+      top = rect.top + window.scrollY + (rect.height / 2) - (tooltipHeight / 2);
+    }
+    // Try left if right doesn't fit
+    else if (rect.left - gap - tooltipWidth - viewportPadding > 0) {
+      placement = "left";
+      left = rect.left + window.scrollX - tooltipWidth - gap;
+      // Vertically center
+      top = rect.top + window.scrollY + (rect.height / 2) - (tooltipHeight / 2);
+    }
+    // Fall back to above
+    else {
+      placement = "above";
+      left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
+      top = rect.top + window.scrollY - tooltipHeight - gap;
     }
 
-    // If tooltip goes off bottom, align to bottom of element
-    if (top + tooltipHeight > viewportHeight + window.scrollY) {
-      top = rect.bottom + window.scrollY - tooltipHeight;
+    // Clamp to viewport with padding
+    if (top < window.scrollY + viewportPadding) {
+      top = window.scrollY + viewportPadding;
     }
-
-    // Ensure tooltip is always visible
-    if (top < window.scrollY) top = window.scrollY + 8;
-    if (left < 0) left = 8;
+    if (top + tooltipHeight > window.scrollY + viewportHeight - viewportPadding) {
+      top = window.scrollY + viewportHeight - tooltipHeight - viewportPadding;
+    }
+    if (left < viewportPadding) {
+      left = viewportPadding;
+    }
+    if (left + tooltipWidth > viewportWidth - viewportPadding) {
+      left = viewportWidth - tooltipWidth - viewportPadding;
+    }
 
     setPosition({ top, left });
   }, [rect]);
 
   return (
     <>
-      {/* Element outline */}
+      {/* Element outline with glow */}
       <div
         className="pointer-events-none fixed"
         style={{
@@ -170,83 +258,11 @@ function TooltipPanel({ specs }: { specs: ElementSpecs }) {
           left: rect.left + window.scrollX,
           width: rect.width,
           height: rect.height,
-          border: "1px dashed rgba(0, 102, 255, 0.5)",
+          border: "2px solid rgba(0, 102, 255, 0.7)",
+          boxShadow: "0 0 8px rgba(0, 102, 255, 0.3)",
           zIndex: 9998,
         }}
       />
-
-      {/* Padding overlay */}
-      <div
-        className="pointer-events-none fixed"
-        style={{
-          top: rect.top + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-          height: rect.height,
-          background: "rgba(0, 102, 255, 0.1)",
-          zIndex: 9997,
-        }}
-      >
-        {/* Padding labels */}
-        {padding.top > 0 && (
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[9px] font-mono text-blue-600 font-bold">
-            {padding.top}
-          </div>
-        )}
-        {padding.right > 0 && (
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-mono text-blue-600 font-bold">
-            {padding.right}
-          </div>
-        )}
-        {padding.bottom > 0 && (
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[9px] font-mono text-blue-600 font-bold">
-            {padding.bottom}
-          </div>
-        )}
-        {padding.left > 0 && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[9px] font-mono text-blue-600 font-bold">
-            {padding.left}
-          </div>
-        )}
-      </div>
-
-      {/* Margin overlay */}
-      {(margin.top > 0 || margin.right > 0 || margin.bottom > 0 || margin.left > 0) && (
-        <div
-          className="pointer-events-none fixed"
-          style={{
-            top: rect.top + window.scrollY - margin.top,
-            left: rect.left + window.scrollX - margin.left,
-            width: rect.width + margin.left + margin.right,
-            height: rect.height + margin.top + margin.bottom,
-            border: "1px dashed rgba(255, 140, 0, 0.4)",
-            background: "rgba(255, 140, 0, 0.05)",
-            zIndex: 9996,
-          }}
-        >
-          {/* Margin labels */}
-          {margin.top > 0 && (
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[9px] font-mono text-orange-600 font-bold">
-              {margin.top}
-            </div>
-          )}
-          {margin.right > 0 && (
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-mono text-orange-600 font-bold">
-              {margin.right}
-            </div>
-          )}
-          {margin.bottom > 0 && (
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[9px] font-mono text-orange-600 font-bold">
-              {margin.bottom}
-            </div>
-          )}
-          {margin.left > 0 && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[9px] font-mono text-orange-600 font-bold">
-              {margin.left}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Tooltip panel */}
       <div
@@ -254,89 +270,130 @@ function TooltipPanel({ specs }: { specs: ElementSpecs }) {
         style={{
           top: position.top,
           left: position.left,
+          width: "300px",
         }}
       >
         <div
-          className="bg-[#1a1a2e] text-white rounded-lg shadow-2xl p-3 max-w-[280px]"
-          style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "11px" }}
+          className="bg-[#1a1a2e] text-white rounded-lg shadow-2xl overflow-hidden"
+          style={{
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: "12px",
+            maxHeight: "400px",
+          }}
         >
-          {/* Element info */}
-          <div className="mb-2">
-            <div className="text-blue-400 font-semibold">
+          {/* Sticky header */}
+          <div className="sticky top-0 bg-[#1a1a2e] px-3 pt-3 pb-2 border-b border-white/10 z-10">
+            <div className="text-blue-400 font-semibold text-[13px]">
               {specs.tag}
               {specs.className && <span className="text-gray-400">.{specs.className}</span>}
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-2 mb-2">
-            <div className="text-gray-400 text-[9px] mb-1">DIMENSIONS</div>
-            <div>{Math.round(specs.width)} × {Math.round(specs.height)}</div>
-          </div>
+          {/* Scrollable content */}
+          <div className="overflow-y-auto px-3 pb-3" style={{
+            maxHeight: "350px",
+            scrollbarWidth: "thin",
+            scrollbarColor: "rgba(255,255,255,0.2) transparent",
+          }}>
+            <style jsx>{`
+              div::-webkit-scrollbar {
+                width: 4px;
+              }
+              div::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              div::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 2px;
+              }
+              div::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.3);
+              }
+            `}</style>
 
-          {/* Spacing */}
-          <div className="border-t border-white/10 pt-2 mb-2">
-            <div className="text-gray-400 text-[9px] mb-1">SPACING</div>
-            <div>
-              Padding: {specs.padding.top} {specs.padding.right} {specs.padding.bottom} {specs.padding.left}
+            {/* SIZE */}
+            <div className="mt-3">
+              <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1.5">SIZE</div>
+              <div>W: {Math.round(specs.width)}  H: {Math.round(specs.height)}</div>
             </div>
-            {(specs.margin.top || specs.margin.right || specs.margin.bottom || specs.margin.left) ? (
-              <div>
-                Margin: {specs.margin.top} {specs.margin.right} {specs.margin.bottom} {specs.margin.left}
-              </div>
-            ) : null}
-            {specs.gap && <div>Gap: {specs.gap}</div>}
-          </div>
 
-          {/* Typography */}
-          {specs.font && (
-            <div className="border-t border-white/10 pt-2 mb-2">
-              <div className="text-gray-400 text-[9px] mb-1">TYPOGRAPHY</div>
-              <div>{specs.font.family}</div>
-              <div>
-                {specs.font.size} / {specs.font.weight} / LH {specs.font.lineHeight}
-              </div>
-              {specs.color && (
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className="w-3 h-3 rounded border border-white/20"
-                    style={{ background: specs.color }}
-                  />
-                  <span>{specs.color}</span>
+            {/* SPACING with box model */}
+            <div className="mt-3">
+              <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1.5">SPACING</div>
+              <BoxModelDiagram
+                padding={specs.padding}
+                margin={specs.margin}
+                width={specs.width}
+                height={specs.height}
+              />
+              {specs.gap && (
+                <div className="text-center text-[11px] text-gray-400 mt-2">
+                  Gap: {specs.gap}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Styles */}
-          <div className="border-t border-white/10 pt-2">
-            <div className="text-gray-400 text-[9px] mb-1">STYLES</div>
-            {specs.background && (
-              <div className="flex items-center gap-2 mb-1">
-                <div
-                  className="w-3 h-3 rounded border border-white/20"
-                  style={{ background: specs.background }}
-                />
-                <span>BG: {specs.background}</span>
-              </div>
-            )}
-            {specs.border && (
-              <div>
-                Border: {specs.border.width} {specs.border.style}
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className="w-3 h-3 rounded border border-white/20"
-                    style={{ background: specs.border.color }}
-                  />
-                  <span>{specs.border.color}</span>
+            {/* TYPOGRAPHY */}
+            {specs.font && (
+              <div className="mt-3">
+                <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1.5">TYPOGRAPHY</div>
+                <div className="space-y-1">
+                  <div>Font: {specs.font.family}</div>
+                  <div>Size: {specs.font.size} / Weight: {specs.font.weight}</div>
+                  <div>Line-height: {specs.font.lineHeight}</div>
+                  {specs.color && (
+                    <div className="flex items-center gap-2">
+                      <span>Color:</span>
+                      <div
+                        className="w-[10px] h-[10px] rounded-sm border border-white/50 inline-block"
+                        style={{ background: specs.color }}
+                      />
+                      <span>{specs.color}</span>
+                    </div>
+                  )}
                 </div>
-                {specs.border.radius !== "0px" && <div>Radius: {specs.border.radius}</div>}
               </div>
             )}
-            {specs.shadow && (
-              <div className="text-[10px] text-gray-300 mt-1">
-                Shadow: {specs.shadow.length > 40 ? specs.shadow.substring(0, 40) + "..." : specs.shadow}
+
+            {/* STYLES */}
+            <div className="mt-3">
+              <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1.5">STYLES</div>
+              <div className="space-y-1.5">
+                {specs.background && (
+                  <div className="flex items-center gap-2">
+                    <span>Background:</span>
+                    <div
+                      className="w-[10px] h-[10px] rounded-sm border border-white/50 inline-block"
+                      style={{ background: specs.background }}
+                    />
+                    <span>{specs.background}</span>
+                  </div>
+                )}
+                {specs.border && (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span>Border: {specs.border.width} {specs.border.style}</span>
+                      <div
+                        className="w-[10px] h-[10px] rounded-sm border border-white/50 inline-block"
+                        style={{ background: specs.border.color }}
+                      />
+                      <span>{specs.border.color}</span>
+                    </div>
+                    {specs.border.radius !== "0px" && (
+                      <div className="mt-1">Radius: {specs.border.radius}</div>
+                    )}
+                  </div>
+                )}
+                {specs.shadow && (
+                  <div className="text-[11px] text-gray-300">
+                    Shadow: {specs.shadow.length > 50 ? specs.shadow.substring(0, 50) + "..." : specs.shadow}
+                  </div>
+                )}
+                {!specs.background && !specs.border && !specs.shadow && (
+                  <div className="text-gray-500 text-[11px]">None</div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
